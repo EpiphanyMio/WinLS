@@ -1,0 +1,31 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>html,body,#map{height:100%;margin:0}#notice{position:absolute;z-index:1000;bottom:10px;left:10px;background:white;padding:5px;font:12px sans-serif;border-radius:4px}</style>
+</head><body><div id="map"></div><div id="notice">© OpenStreetMap contributors</div>
+<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+let map, routeLayer, pointLayer, singleLayer, searchLayer, bridge;
+new QWebChannel(qt.webChannelTransport, channel => { bridge = channel.objects.bridge; });
+function init() {
+  if (!window.L) {document.getElementById('notice').textContent='地图加载失败，请检查网络连接。';return;}
+  map=L.map('map').setView([39.9042,116.4074],14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);
+  routeLayer=L.layerGroup().addTo(map);pointLayer=L.layerGroup().addTo(map);
+  map.on('click', e => {if(bridge) bridge.mapClicked(e.latlng.lat,e.latlng.lng);});
+}
+function draw(points, preview, single, search, fit) {
+  if(!map)return;
+  pointLayer.clearLayers();routeLayer.clearLayers();
+  const path=(preview&&preview.length?preview:points).map(p=>[p.latitude,p.longitude]);
+  if(path.length>1)L.polyline(path,{color:'#0d9488',weight:4}).addTo(routeLayer);
+  points.forEach((p,i)=>{if(i<30||i%Math.ceil(points.length/12)===0)L.circleMarker([p.latitude,p.longitude],{radius:5,color:'#0d9488',fillOpacity:.9}).bindTooltip(String(i+1)).addTo(pointLayer)});
+  if(singleLayer)map.removeLayer(singleLayer);if(searchLayer)map.removeLayer(searchLayer);
+  if(single)singleLayer=L.circleMarker([single.latitude,single.longitude],{radius:8,color:'#9333ea'}).bindTooltip('单点定位').addTo(map);
+  if(search)searchLayer=L.marker([search.latitude,search.longitude]).addTo(map);
+  if(fit&&points.length)map.fitBounds(L.latLngBounds(points.map(p=>[p.latitude,p.longitude])).pad(.2),{maxZoom:16});
+}
+function focus(lat,lon){if(map)map.setView([lat,lon],16)}
+init();
+</script></body></html>

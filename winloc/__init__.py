@@ -1,0 +1,1 @@
+"""Windows location simulator."""
