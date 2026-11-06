@@ -1,0 +1,114 @@
+name: Build beta release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/beta-release.yml
+      - launcher.py
+      - requirements*.txt
+      - scripts/build.ps1
+      - packaging/windows.iss
+      - winloc/**
+      - android-companion/**
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tests -v
+
+  windows:
+    needs: tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - name: Build Windows application
+        shell: pwsh
+        run: ./scripts/build.ps1
+      - name: Smoke test bundled executable
+        shell: pwsh
+        run: |
+          & ./dist/WindowsLocationSimulator/WindowsLocationSimulator.exe --self-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $compiler)) {
+            choco install innosetup --no-progress -y
+          }
+          if (-not (Test-Path $compiler)) { throw "Inno Setup compiler not found" }
+          & $compiler "/DAppVersion=0.1.0-beta.1" packaging/windows.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Test-Path dist/release/WinLS-0.1.0-beta.1-Windows-Setup.exe)) {
+            throw "Windows installer not generated"
+          }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: winls-windows-beta
+          path: dist/release/WinLS-0.1.0-beta.1-Windows-Setup.exe
+          if-no-files-found: error
+
+  android:
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK components
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Build Android companion APK
+        working-directory: android-companion
+        run: ./gradlew :app:assembleDebug --no-daemon
+      - name: Verify and name APK
+        run: |
+          mkdir -p dist/release
+          cp android-companion/app/build/outputs/apk/debug/app-debug.apk dist/release/WinLS-0.1.0-beta.1-Android.apk
+          test -s dist/release/WinLS-0.1.0-beta.1-Android.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging dist/release/WinLS-0.1.0-beta.1-Android.apk | grep "versionName='0.1.0-beta.1'"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: winls-android-beta
+          path: dist/release/WinLS-0.1.0-beta.1-Android.apk
+          if-no-files-found: error
+
+  release:
+    needs: [windows, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: winls-*-beta
+          path: release-assets
+          merge-multiple: true
+      - name: Publish beta prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test -s release-assets/WinLS-0.1.0-beta.1-Windows-Setup.exe
+          test -s release-assets/WinLS-0.1.0-beta.1-Android.apk
+          if gh release view v0.1.0-beta.1 >/dev/null 2>&1; then
+            echo "Beta release already exists; leaving it unchanged."
+            exit 0
+          fi
+          gh release create v0.1.0-beta.1 release-assets/* \
+            --target "$GITHUB_SHA" --title "WinLS 0.1.0 beta.1" \
+            --notes-file RELEASE-NOTES-beta.md --prerelease

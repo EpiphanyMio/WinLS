@@ -5,7 +5,13 @@ import sys
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == "--list-devices":
+    if len(sys.argv) > 1 and sys.argv[1] == "--self-test":
+        import winloc.app
+        import winloc.android
+        import winloc.harmony
+        import winloc.ios
+        print("WinLS beta imports OK")
+    elif len(sys.argv) > 1 and sys.argv[1] == "--list-devices":
         from pymobiledevice3.usbmux import list_devices
         print(json.dumps([device.serial for device in asyncio.run(list_devices()) if device.is_usb]), flush=True)
     elif len(sys.argv) > 2 and sys.argv[1] == "--iphone-bridge":
