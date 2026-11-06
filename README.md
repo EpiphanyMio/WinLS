@@ -39,7 +39,7 @@ Windows 端通过 ADB 向配套 App 的受限广播接收器发送坐标。接�
 
 ## HarmonyOS 实体设备
 
-原生 HarmonyOS 7.0.0 及以上设备可使用华为官方 [testhelper 位置模拟命令](https://developer.huawei.com/consumer/cn/doc/HarmonyOS-Guides/testhelper-guidelines/)。在 Windows 安装 DevEco Studio 或 HarmonyOS Command Line Tools，并将 SDK 的 `toolchains` 目录（包含 `hdc.exe`）加入 PATH；手机开启开发者选项和 USB 调试，授权电脑后确认 `hdc list targets` 列出设备。返回本程序点击刷新，选择“HarmonyOS 设备”。单点和路线都通过 hdc 向设备发送 GPX，再由 `testhelper` 回放；清除定位会恢复真实位置。
+原生 HarmonyOS 7.0.0 及以上设备可使用华为官方 [testhelper 位置模拟命令](https://developer.huawei.com/consumer/cn/doc/HarmonyOS-Guides/testhelper-guidelines/)。在 Windows 安装 DevEco Studio 或华为 [Command Line Tools](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ide-commandline-get)，手机开启开发者选项和 USB 调试并授权电脑。程序会自动检查 PATH 和常见 SDK 安装目录；若找不到 `hdc`，点击刷新后会询问是否打开华为官方安装说明。安装/解压后再次刷新，程序会自动发现常见 SDK 路径并在本次运行中配置 `hdc`，不必手动修改系统 PATH。也可将 SDK 的 `toolchains` 目录（包含 `hdc.exe`）加入 PATH。确认设备已授权后，选择“HarmonyOS 设备”。单点和路线都通过 hdc 向设备发送 GPX，再由 `testhelper` 回放；清除定位会恢复真实位置。
 
 testhelper 每个 GPX 最多支持 1000 个位置点，更新间隔必须是 1～3600 秒的整数。程序会按路线时长自动选取间隔，并在设备端回放期间保留停止功能；因此 HarmonyOS 路线的时间和位置精度可能低于 iPhone/Android 约 0.5 秒一次的更新。设备端若返回“不支持位置模拟”，程序会显示具体错误。程序退出时会尝试关闭通过本程序启用的模拟定位。连接方式和 hdc 安装见 [华为官方 hdc 文档](https://developer.huawei.com/consumer/en/doc/harmonyos-guides/hdc/)。
 
