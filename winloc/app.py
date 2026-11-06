@@ -26,6 +26,7 @@ from .core import (Configuration, Coordinate, DynamicPlan, MotionProfile, RouteS
 from .ios import PhoneSession, connected_devices
 from .android import AndroidBridge, connected_devices as connected_android_devices
 from .driver_check import DriverReport, probe as probe_ios_drivers
+from .harmony import HarmonyBridge, connected_devices as connected_harmony_devices
 
 APP_DIR = Path(os.getenv("APPDATA") or Path.home() / ".config") / "WindowsLocationSimulator"
 SETTINGS = APP_DIR / "settings.json"
@@ -75,6 +76,15 @@ class RouteRunner(QRunnable):
 
     def run(self):
         c = self.config
+        if hasattr(self.session, "replay"):
+            try:
+                self.session.replay(self.udid, c, self.stop_event,
+                                    self.signals.status.emit, self.signals.preview.emit)
+            except Exception as exc:
+                self.signals.status.emit(f"模拟失败：{exc}")
+            finally:
+                self.signals.finished.emit()
+            return
         points = closed(c.route)
         seed = random.getrandbits(64)
         motion = MotionProfile(c.speedMetersPerSecond, c.dynamicSpeed, c.dynamicSpeedPlan, seed)
@@ -165,6 +175,7 @@ class MainWindow(QMainWindow):
         self.pool = QThreadPool.globalInstance()
         self.ios_session = PhoneSession()
         self.android_bridge = AndroidBridge()
+        self.harmony_bridge = HarmonyBridge()
         self.runner = None
         self.points = []
         self.places = []
@@ -271,7 +282,7 @@ class MainWindow(QMainWindow):
         self._button("刷新", self.refresh_devices, row)
         self._button("检查 iOS 驱动", self.check_ios_drivers, row)
         devices.addLayout(row)
-        devices.addWidget(QLabel("支持 USB iPhone 和已授权 ADB 的 Android 设备。"))
+        devices.addWidget(QLabel("支持 USB iPhone、ADB Android 和 hdc HarmonyOS 7+ 设备。"))
         self.driver_guide = QLabel()
         self.driver_guide.setTextFormat(Qt.RichText)
         self.driver_guide.setOpenExternalLinks(True)
@@ -559,14 +570,15 @@ class MainWindow(QMainWindow):
     def refresh_devices(self):
         def discover():
             found, errors = [], []
-            for kind, lookup in (("ios", connected_devices), ("android", connected_android_devices)):
+            for kind, lookup in (("ios", connected_devices), ("android", connected_android_devices),
+                                 ("harmony", connected_harmony_devices)):
                 try:
                     found.extend((kind, identifier) for identifier in lookup())
                 except RuntimeError as exc:
                     errors.append(str(exc))
             report = probe_ios_drivers() if not any(kind == "ios" for kind, _ in found) else None
             return found, errors, report
-        self._task(discover, self._set_devices, "正在查找 iPhone 和 Android 设备…")
+        self._task(discover, self._set_devices, "正在查找 iPhone、Android 和 HarmonyOS 设备…")
 
     def _set_devices(self, result):
         devices, errors, report = result
@@ -574,13 +586,14 @@ class MainWindow(QMainWindow):
         self.device_combo.clear()
         for kind, identifier in devices:
             label = ("iOS 设备 · " + identifier[-8:] if kind == "ios"
+                     else "HarmonyOS 设备 · " + identifier if kind == "harmony"
                      else "Android 设备 · " + identifier)
             self.device_combo.addItem(label, (kind, identifier))
         index = self.device_combo.findData(previous)
         if index >= 0:
             self.device_combo.setCurrentIndex(index)
         self.status.setText((f"找到 {len(devices)} 台设备。" if devices else "未找到设备。")
-                            + (" " + "；".join(errors) if errors else ""))
+                            + (" " + "；".join(errors) if errors and not devices else ""))
         if report and report.apple_usb_connected:
             self.driver_guide.setText(report.guide_html())
             self.driver_guide.show()
@@ -601,7 +614,9 @@ class MainWindow(QMainWindow):
         if not target:
             raise ValueError("请先连接并选择设备。")
         kind, identifier = target
-        return (self.ios_session if kind == "ios" else self.android_bridge), identifier
+        backend = {"ios": self.ios_session, "android": self.android_bridge,
+                   "harmony": self.harmony_bridge}[kind]
+        return backend, identifier
 
     def set_point(self):
         if self.runner:
@@ -814,6 +829,7 @@ class MainWindow(QMainWindow):
         self._save_draft()
         self.ios_session.close()
         self.android_bridge.close()
+        self.harmony_bridge.close()
         event.accept()
 
 

@@ -1,20 +1,19 @@
 # 定位模拟器 · Windows
 
-这是独立的 Windows 桌面项目。功能以 Mac 版 `LocationSimulator` 1.1.0 为参考：iPhone 和 Android 实体设备的单点定位、路径循环模拟、地图选点和搜索、学校附近运动场地、1000 米跑道模板、配速与动态速度、平滑路线偏移、JSON 配置导入导出、搜索历史和路线草稿记忆。配置 JSON 与 Mac 版 `schemaVersion: 1` 兼容。地图数据来自 OpenStreetMap；搜索使用 Nominatim，选中学校后使用 Overpass 查找运动场地，结果覆盖范围可能与 Apple 地图不同。
+这是独立的 Windows 桌面项目。功能以 Mac 版 `LocationSimulator` 1.1.0 为参考：iPhone、Android 和 HarmonyOS 7+ 实体设备的单点定位、路径循环模拟、地图选点和搜索、学校附近运动场地、1000 米跑道模板、配速与动态速度、平滑路线偏移、JSON 配置导入导出、搜索历史和路线草稿记忆。配置 JSON 与 Mac 版 `schemaVersion: 1` 兼容。地图数据来自 OpenStreetMap；搜索使用 Nominatim，选中学校后使用 Overpass 查找运动场地，结果覆盖范围可能与 Apple 地图不同。
 
 ## Windows 上运行
 
-1. 安装 Windows 10/11、Python 3.12（64 位）、Apple Devices 或 Apple 官网的 iTunes（包含 Apple Mobile Device Support/USB 驱动）。将 iPhone 用 USB 连接、解锁并点按“信任此电脑”。在 iPhone 设置中开启“开发者模式”并按提示重启。需要 iOS 17 或更新版本。
+1. 安装 Windows 10/11 和 Python 3.12（64 位）。若要连接 iPhone，还需安装 Apple Devices 或 Apple 官网的 iTunes（包含 Apple Mobile Device Support/USB 驱动）。将 iPhone 用 USB 连接、解锁并点按“信任此电脑”；开启“开发者模式”并按提示重启。iPhone 需要 iOS 17 或更新版本。Android 和 HarmonyOS 的连接准备见下文。
 2. 在 PowerShell 中运行：
 
    ```powershell
    py -3.12 -m venv .venv
    .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-   .\.venv\Scripts\python.exe -m pymobiledevice3 usbmux list --simple --usb
    .\.venv\Scripts\python.exe -m winloc.app
    ```
 
-3. 点击“刷新”选择设备。单点定位可直接输入坐标、在地图上选点或搜索地点；路线可在地图上逐点绘制，也可切换到“坐标文本”后应用。点击“开始模拟”后每约 0.5 秒发送一次坐标。“停止”保留当前坐标，“清除定位”清除开发者模拟定位。退出程序会尝试清除定位并结束设备会话。
+3. 点击“刷新”选择设备。单点定位可直接输入坐标、在地图上选点或搜索地点；路线可在地图上逐点绘制，也可切换到“坐标文本”后应用。iPhone 和 Android 的路线约每 0.5 秒发送一次坐标；HarmonyOS 路线由设备端按 GPX 回放，间隔至少 1 秒。“停止”保留当前坐标，“清除定位”恢复设备默认定位。退出程序会尝试清除定位并结束设备会话。
 
 Windows 无法运行 Apple 的 Xcode iOS Simulator，因此 Mac 版的 iOS 模拟器设备选项在 Windows 上没有对应设备；本程序的 iOS 定位目标是连接的实体 iPhone。
 
@@ -38,6 +37,14 @@ Windows 无法运行 Apple 的 Xcode iOS Simulator，因此 Mac 版的 iOS 模�
 
 Windows 端通过 ADB 向配套 App 的受限广播接收器发送坐标。接收器只接受持有 Android `DUMP` 权限的发送者（ADB shell），并返回明确的成功或错误结果；App 使用 `LocationManager` 的 GPS 和网络测试位置提供者。USB 断开、App 未安装或未被选为模拟定位应用时，Windows 程序会显示失败。部分 App 会识别模拟位置或使用其他定位来源，厂商系统行为也可能不同。Android 模拟器的 `adb emu geo fix` 仅适用于模拟器，本项目的 Android 功能面向实体设备。
 
+## HarmonyOS 实体设备
+
+原生 HarmonyOS 7.0.0 及以上设备可使用华为官方 [testhelper 位置模拟命令](https://developer.huawei.com/consumer/cn/doc/HarmonyOS-Guides/testhelper-guidelines/)。在 Windows 安装 DevEco Studio 或 HarmonyOS Command Line Tools，并将 SDK 的 `toolchains` 目录（包含 `hdc.exe`）加入 PATH；手机开启开发者选项和 USB 调试，授权电脑后确认 `hdc list targets` 列出设备。返回本程序点击刷新，选择“HarmonyOS 设备”。单点和路线都通过 hdc 向设备发送 GPX，再由 `testhelper` 回放；清除定位会恢复真实位置。
+
+testhelper 每个 GPX 最多支持 1000 个位置点，更新间隔必须是 1～3600 秒的整数。程序会按路线时长自动选取间隔，并在设备端回放期间保留停止功能；因此 HarmonyOS 路线的时间和位置精度可能低于 iPhone/Android 约 0.5 秒一次的更新。设备端若返回“不支持位置模拟”，程序会显示具体错误。程序退出时会尝试关闭通过本程序启用的模拟定位。连接方式和 hdc 安装见 [华为官方 hdc 文档](https://developer.huawei.com/consumer/en/doc/harmonyos-guides/hdc/)。
+
+仍可安装 APK 的较早 HarmonyOS 版本可尝试上面的 Android/ADB 配套 App 路径；原生 HarmonyOS 设备不要安装该 APK。此项目尚未在实体 HarmonyOS 设备上完成端到端验证。
+
 ## 验证
 
-运行 `python -m unittest discover -s tests -v` 验证配置兼容、轨迹、跑道、动态速度、ADB 命令及 iOS 驱动诊断。实体设备验证需在 Windows/iPhone/Android 环境进行。项目仅用于开发与测试。
+运行 `python -m unittest discover -s tests -v` 验证配置兼容、轨迹、跑道、动态速度、ADB/HDC 命令及 iOS 驱动诊断。实体设备验证需在 Windows/iPhone/Android/HarmonyOS 环境进行。项目仅用于开发与测试。
