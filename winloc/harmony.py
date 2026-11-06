@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import os
 import random
 import re
 import shutil
@@ -17,10 +18,41 @@ from .core import Configuration, Coordinate, MotionProfile, RouteStepper, closed
 
 MAX_POINTS = 1000
 MAX_INTERVAL = 3600
+_configured_hdc: str | None = None
+
+
+def configure_hdc(path: str | None = None) -> str | None:
+    """Find hdc in common HarmonyOS SDK installs and add its folder to this process PATH."""
+    global _configured_hdc
+    candidates: list[Path] = []
+    if path:
+        candidates.append(Path(path))
+    if found := shutil.which("hdc"):
+        candidates.append(Path(found))
+    for key in ("DEVECO_STUDIO_HOME", "HARMONYOS_SDK_HOME", "OHOS_SDK_HOME"):
+        if value := os.environ.get(key):
+            base = Path(value)
+            candidates.extend((base / "sdk/default/HarmonyOS/toolchains/hdc.exe",
+                               base / "sdk/default/openharmony/toolchains/hdc.exe",
+                               base / "sdk/default/toolchains/hdc.exe",
+                               base / "toolchains/hdc.exe"))
+    for base in (Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Huawei",
+                 Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local")) / "Huawei",
+                 Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "DevEco Studio"):
+        if base.exists():
+            candidates.extend(base.glob("**/sdk/default/HarmonyOS/toolchains/hdc.exe"))
+            candidates.extend(base.glob("**/sdk/default/openharmony/toolchains/hdc.exe"))
+    for candidate in candidates:
+        executable = candidate if candidate.is_file() else candidate / "hdc.exe"
+        if executable.is_file():
+            _configured_hdc = str(executable.resolve())
+            os.environ["PATH"] = str(executable.parent) + os.pathsep + os.environ.get("PATH", "")
+            return _configured_hdc
+    return None
 
 
 def _hdc() -> str:
-    executable = shutil.which("hdc")
+    executable = _configured_hdc or shutil.which("hdc") or configure_hdc()
     if not executable:
         raise RuntimeError("未找到 hdc。请安装 DevEco Studio，并将 HarmonyOS SDK 的 toolchains 目录加入 PATH。")
     return executable
