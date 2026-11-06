@@ -252,13 +252,22 @@ class MainWindow(QMainWindow):
         left_layout.addLayout(result_row)
         self.map = QWebEngineView()
         self.map.settings().setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)
+        self.map.page().profile().setHttpUserAgent(USER_AGENT)
         self.bridge = MapBridge()
         self.bridge.clicked.connect(self.map_clicked)
         channel = QWebChannel(self.map.page())
         channel.registerObject("bridge", self.bridge)
         self.map.page().setWebChannel(channel)
         self.map.loadFinished.connect(self._map_loaded)
-        self.map.load(QUrl.fromLocalFile(str(Path(__file__).with_name("map.html"))))
+        map_dir = Path(__file__).parent
+        map_html = (map_dir / "map.html").read_text(encoding="utf-8")
+        for placeholder, asset in (
+            ("__LEAFLET_CSS__", map_dir / "vendor" / "leaflet" / "leaflet.css"),
+            ("__QWEBCHANNEL_JS__", map_dir / "qwebchannel.js"),
+            ("__LEAFLET_JS__", map_dir / "vendor" / "leaflet" / "leaflet.js"),
+        ):
+            map_html = map_html.replace(placeholder, asset.read_text(encoding="utf-8"))
+        self.map.setHtml(map_html, QUrl.fromLocalFile(str(map_dir / "map.html")))
         left_layout.addWidget(self.map, 1)
         map_buttons = QHBoxLayout()
         self.undo_button = self._button("撤销上一点", self.undo_point, map_buttons)

@@ -19,6 +19,10 @@ SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayIcon={app}\WindowsLocationSimulator.exe
 
+[InstallDelete]
+Type: files; Name: "{app}\_internal\icuuc.dll"
+Type: files; Name: "{app}\_internal\icudt78.dll"
+
 [Files]
 Source: "..\dist\WindowsLocationSimulator\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 

@@ -90,21 +90,19 @@ jobs:
           if-no-files-found: error
 
   release:
-    needs: [windows, android]
+    needs: windows
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          pattern: winls-*-beta
+          name: winls-windows-beta
           path: release-assets
-          merge-multiple: true
       - name: Publish beta prerelease
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           test -s release-assets/WinLS-0.1.0-beta.1-Windows-Setup.exe
-          test -s release-assets/WinLS-0.1.0-beta.1-Android.apk
           if gh release view v0.1.0-beta.1 >/dev/null 2>&1; then
             echo "Beta release already exists; leaving it unchanged."
             exit 0
