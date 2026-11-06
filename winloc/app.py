@@ -12,7 +12,7 @@ import time
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, QTimer, QUrl, Signal, Slot
+from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, QTimer, QUrl, QDesktopServices, Signal, Slot
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDoubleSpinBox,
     QFileDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget,
     QMainWindow, QMessageBox, QPushButton, QScrollArea, QSpinBox, QSplitter,
@@ -26,7 +26,8 @@ from .core import (Configuration, Coordinate, DynamicPlan, MotionProfile, RouteS
 from .ios import PhoneSession, connected_devices
 from .android import AndroidBridge, connected_devices as connected_android_devices
 from .driver_check import DriverReport, probe as probe_ios_drivers
-from .harmony import HarmonyBridge, connected_devices as connected_harmony_devices
+from .harmony import (HarmonyBridge, configure_hdc,
+                      connected_devices as connected_harmony_devices)
 
 APP_DIR = Path(os.getenv("APPDATA") or Path.home() / ".config") / "WindowsLocationSimulator"
 SETTINGS = APP_DIR / "settings.json"
@@ -582,6 +583,8 @@ class MainWindow(QMainWindow):
             for kind, lookup in (("ios", connected_devices), ("android", connected_android_devices),
                                  ("harmony", connected_harmony_devices)):
                 try:
+                    if kind == "harmony":
+                        configure_hdc()
                     found.extend((kind, identifier) for identifier in lookup())
                 except RuntimeError as exc:
                     errors.append(str(exc))
@@ -603,6 +606,15 @@ class MainWindow(QMainWindow):
             self.device_combo.setCurrentIndex(index)
         self.status.setText((f"找到 {len(devices)} 台设备。" if devices else "未找到设备。")
                             + (" " + "；".join(errors) if errors and not devices else ""))
+        if any("未找到 hdc" in error for error in errors):
+            answer = QMessageBox.question(
+                self, "安装 HarmonyOS 设备工具",
+                "未检测到 HarmonyOS SDK/hdc。是否打开华为官方 Command Line Tools 下载与安装说明？\n\n"
+                "安装或解压后再次点击“刷新”，程序会自动查找常见 SDK 目录并配置当前运行环境。",
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+            if answer == QMessageBox.Yes:
+                QDesktopServices.openUrl(QUrl(
+                    "https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ide-commandline-get"))
         if report and report.apple_usb_connected:
             self.driver_guide.setText(report.guide_html())
             self.driver_guide.show()
