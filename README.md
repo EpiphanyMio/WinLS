@@ -20,6 +20,12 @@ Windows 无法运行 Apple 的 Xcode iOS Simulator，因此 Mac 版的 iOS 模�
 
 若设备列表为空，先确认驱动已安装、USB 连接和信任状态。`pymobiledevice3 usbmux list --simple --usb` 是连接诊断的第一步。服务连接失败时，检查开发者模式以及 iOS 与 pymobiledevice3 的兼容性。某些设备准备步骤可能需要更新 Apple 驱动或完成配对。地图、地点搜索需要网络；手动坐标和设备通信可离线使用。
 
+### iOS 驱动检测
+
+点击目标设备旁的“检查 iOS 驱动”，可查看 Apple Mobile Device Service 是否安装并运行、Apple USB 驱动是否可检测、以及是否安装爱思助手。刷新设备时，如果 Windows 检测到连接的 Apple USB 设备但没有找到 iPhone，也会自动显示诊断。爱思助手只作为诊断线索；即使它已安装，程序仍以 Apple 服务和驱动的实际检测结果判断是否就绪。
+
+若提示缺少组件，优先安装或更新 [Apple Devices（微软商店）](https://apps.microsoft.com/detail/9np83lwlpz9k)，或从 [Apple 官网](https://www.apple.com/itunes/)安装 iTunes；若已经安装爱思助手，也可使用其驱动修复功能。安装后重启电脑，重新连接并解锁 iPhone，选择“信任此电脑”。若服务已安装但未运行，在 `services.msc` 中启动或重启 Apple Mobile Device Service。仍不能识别时参考 [Apple 官方连接排查](https://support.apple.com/en-us/108643)。驱动检测是只读检查；在不同版本的 Apple 驱动和 Windows 上，未检测到并不必然代表组件不存在。
+
 ## 打包
 
 在 Windows PowerShell 执行 `powershell -ExecutionPolicy Bypass -File scripts\build.ps1`。输出目录为 `dist\WindowsLocationSimulator`；这是目录式程序，需连同目录中的依赖一起分发。当前构建会附带控制台窗口，以便设备桥接进程通过标准输入输出通信并显示诊断信息。Android 功能还需要单独安装 ADB Platform-Tools 和下述手机配套 App。尚未在真实 Windows 主机和实体手机上完成端到端测试，分发前应在目标系统验证安装、发现设备、设置和清除定位、路线运行。程序未签名。
@@ -34,4 +40,4 @@ Windows 端通过 ADB 向配套 App 的受限广播接收器发送坐标。接�
 
 ## 验证
 
-运行 `python -m unittest discover -s tests -v` 验证配置兼容、轨迹、跑道、动态速度及 ADB 命令。实体设备验证需在 Windows/iPhone/Android 环境进行。项目仅用于开发与测试。
+运行 `python -m unittest discover -s tests -v` 验证配置兼容、轨迹、跑道、动态速度、ADB 命令及 iOS 驱动诊断。实体设备验证需在 Windows/iPhone/Android 环境进行。项目仅用于开发与测试。

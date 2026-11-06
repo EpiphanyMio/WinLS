@@ -25,6 +25,7 @@ from .core import (Configuration, Coordinate, DynamicPlan, MotionProfile, RouteS
                    closed, generate_track, pace_to_speed, parse_points, speed_to_pace)
 from .ios import PhoneSession, connected_devices
 from .android import AndroidBridge, connected_devices as connected_android_devices
+from .driver_check import DriverReport, probe as probe_ios_drivers
 
 APP_DIR = Path(os.getenv("APPDATA") or Path.home() / ".config") / "WindowsLocationSimulator"
 SETTINGS = APP_DIR / "settings.json"
@@ -268,8 +269,15 @@ class MainWindow(QMainWindow):
         self.device_combo = QComboBox()
         row.addWidget(self.device_combo, 1)
         self._button("刷新", self.refresh_devices, row)
+        self._button("检查 iOS 驱动", self.check_ios_drivers, row)
         devices.addLayout(row)
         devices.addWidget(QLabel("支持 USB iPhone 和已授权 ADB 的 Android 设备。"))
+        self.driver_guide = QLabel()
+        self.driver_guide.setTextFormat(Qt.RichText)
+        self.driver_guide.setOpenExternalLinks(True)
+        self.driver_guide.setWordWrap(True)
+        self.driver_guide.hide()
+        devices.addWidget(self.driver_guide)
 
         single = self._box("单点定位", side)
         self.pick_point = QCheckBox("在地图上选点")
@@ -556,11 +564,12 @@ class MainWindow(QMainWindow):
                     found.extend((kind, identifier) for identifier in lookup())
                 except RuntimeError as exc:
                     errors.append(str(exc))
-            return found, errors
+            report = probe_ios_drivers() if not any(kind == "ios" for kind, _ in found) else None
+            return found, errors, report
         self._task(discover, self._set_devices, "正在查找 iPhone 和 Android 设备…")
 
     def _set_devices(self, result):
-        devices, errors = result
+        devices, errors, report = result
         previous = self.device_combo.currentData()
         self.device_combo.clear()
         for kind, identifier in devices:
@@ -572,6 +581,20 @@ class MainWindow(QMainWindow):
             self.device_combo.setCurrentIndex(index)
         self.status.setText((f"找到 {len(devices)} 台设备。" if devices else "未找到设备。")
                             + (" " + "；".join(errors) if errors else ""))
+        if report and report.apple_usb_connected:
+            self.driver_guide.setText(report.guide_html())
+            self.driver_guide.show()
+            self.status.setText(self.status.text() + " " + report.summary())
+        else:
+            self.driver_guide.hide()
+
+    def check_ios_drivers(self):
+        self._task(probe_ios_drivers, self._show_driver_diagnosis, "正在检查 iOS 驱动…")
+
+    def _show_driver_diagnosis(self, report: DriverReport):
+        self.driver_guide.setText(report.guide_html())
+        self.driver_guide.show()
+        self.status.setText(report.summary())
 
     def _target(self):
         target = self.device_combo.currentData()
