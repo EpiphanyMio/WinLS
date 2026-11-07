@@ -6,7 +6,8 @@
 <script>__QWEBCHANNEL_JS__</script>
 <script>__LEAFLET_JS__</script>
 <script>
-let map, routeLayer, pointLayer, singleLayer, searchLayer, bridge;
+let map, routeLayer, pointLayer, singleLayer, searchLayer, bridge, routePolyline;
+let activeDrag=null, suppressClickUntil=0;
 const notice=document.getElementById('notice');
 if (typeof QWebChannel === 'function' && window.qt && qt.webChannelTransport) {
   new QWebChannel(qt.webChannelTransport, channel => { bridge = channel.objects.bridge; });
@@ -21,14 +22,46 @@ function init() {
     .on('tileload', () => { notice.textContent='© OpenStreetMap contributors'; })
     .addTo(map);
   routeLayer=L.layerGroup().addTo(map);pointLayer=L.layerGroup().addTo(map);
-  map.on('click', e => {if(bridge) bridge.mapClicked(e.latlng.lat,e.latlng.lng);});
+  map.on('click', e => {if(bridge&&Date.now()>suppressClickUntil) bridge.mapClicked(e.latlng.lat,e.latlng.lng);});
+  map.on('mousemove', e => {
+    if(!activeDrag)return;
+    activeDrag.marker.setLatLng(e.latlng);
+    activeDrag.points[activeDrag.index]={latitude:e.latlng.lat,longitude:e.latlng.lng};
+    if(routePolyline){
+      const coords=activeDrag.points.map(p=>[p.latitude,p.longitude]);
+      if(coords.length>1)coords.push(coords[0]);
+      routePolyline.setLatLngs(coords);
+    }
+  });
+  document.addEventListener('mouseup', () => {
+    if(!activeDrag)return;
+    const drag=activeDrag;
+    activeDrag=null;
+    map.dragging.enable();
+    suppressClickUntil=Date.now()+250;
+    const position=drag.marker.getLatLng();
+    if(bridge&&(!drag.original.equals(position)))
+      bridge.pointMoved(drag.index,position.lat,position.lng);
+  });
 }
-function draw(points, preview, single, search, fit) {
+function draw(points, preview, single, search, fit, editable) {
   if(!map)return;
+  if(activeDrag){activeDrag=null;map.dragging.enable();}
   pointLayer.clearLayers();routeLayer.clearLayers();
   const path=(preview&&preview.length?preview:points).map(p=>[p.latitude,p.longitude]);
-  if(path.length>1)L.polyline(path,{color:'#0d9488',weight:4}).addTo(routeLayer);
-  points.forEach((p,i)=>{if(i<30||i%Math.ceil(points.length/12)===0)L.circleMarker([p.latitude,p.longitude],{radius:5,color:'#0d9488',fillOpacity:.9}).bindTooltip(String(i+1)).addTo(pointLayer)});
+  routePolyline=path.length>1?L.polyline(path,{color:'#0d9488',weight:4}).addTo(routeLayer):null;
+  const pointRenderer=points.length>500?L.canvas():undefined;
+  points.forEach((p,i)=>{
+    const marker=L.circleMarker([p.latitude,p.longitude],{
+      radius:editable?7:5,color:'#0d9488',fillOpacity:.9,renderer:pointRenderer
+    }).bindTooltip(String(i+1)).addTo(pointLayer);
+    if(editable)marker.on('mousedown',e=>{
+      L.DomEvent.stop(e.originalEvent);
+      map.dragging.disable();
+      activeDrag={index:i,marker,points,original:marker.getLatLng()};
+      suppressClickUntil=Date.now()+250;
+    });
+  });
   if(singleLayer)map.removeLayer(singleLayer);if(searchLayer)map.removeLayer(searchLayer);
   if(single)singleLayer=L.circleMarker([single.latitude,single.longitude],{radius:8,color:'#9333ea'}).bindTooltip('单点定位').addTo(map);
   if(search)searchLayer=L.circleMarker([search.latitude,search.longitude],{radius:7,color:'#d97706',fillOpacity:.9}).addTo(map);
@@ -37,3 +70,4 @@ function draw(points, preview, single, search, fit) {
 function focus(lat,lon){if(map)map.setView([lat,lon],16)}
 init();
 </script></body></html>
+
