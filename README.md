@@ -1,5 +1,7 @@
 # 定位模拟器 · Windows
 
+> 项目已合并至 [AnyWay](https://github.com/EpiphanyMio/AnyWay)。本仓库保留 WinLS 0.1.0 的历史代码和发布包；Mac 与 Windows 的后续更新统一在 AnyWay 进行。
+
 这是独立的 Windows 桌面项目。功能以 Mac 版 `LocationSimulator` 1.1.0 为参考：iPhone、Android 和 HarmonyOS 7+ 实体设备的单点定位、路径循环模拟、地图选点和搜索、学校附近运动场地、400 米跑道模板、配速与动态速度、平滑路线偏移、JSON 配置导入导出、搜索历史和路线草稿记忆。配置 JSON 与 Mac 版 `schemaVersion: 1` 兼容。地图界面所需的 Leaflet 和 WebChannel 脚本随程序提供；底图瓦片仍需连接 OpenStreetMap，搜索使用 Nominatim，选中学校后使用 Overpass 查找运动场地，结果覆盖范围可能与 Apple 地图不同。
 
 ## Windows 上运行
