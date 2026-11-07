@@ -13,7 +13,7 @@
    .\.venv\Scripts\python.exe -m winloc.app
    ```
 
-3. 点击“刷新”选择设备。单点定位可直接输入坐标、在地图上选点或搜索地点；路线可在地图上逐点绘制，也可切换到“坐标文本”后应用。iPhone 和 Android 的路线约每 0.5 秒发送一次坐标；HarmonyOS 路线由设备端按 GPX 回放，间隔至少 1 秒。“停止”保留当前坐标，“清除定位”恢复设备默认定位。退出程序会尝试清除定位并结束设备会话。
+3. 点击“刷新”选择设备。单点定位可直接输入坐标、在地图上选点或搜索地点；路线可在地图上逐点绘制，已绘制点可拖动调整，也可切换到“坐标文本”后应用。iPhone 和 Android 的路线约每 0.5 秒发送一次坐标；HarmonyOS 路线由设备端按 GPX 回放，间隔至少 1 秒。“停止”保留当前坐标，“清除定位”恢复设备默认定位。退出程序会尝试清除定位并结束设备会话。
 
 Windows 无法运行 Apple 的 Xcode iOS Simulator，因此 Mac 版的 iOS 模拟器设备选项在 Windows 上没有对应设备；本程序的 iOS 定位目标是连接的实体 iPhone。
 
@@ -51,3 +51,4 @@ testhelper 每个 GPX 最多支持 1000 个位置点，更新间隔必须是 1�
 ## 验证
 
 运行 `python -m unittest discover -s tests -v` 验证配置兼容、轨迹、跑道、动态速度、ADB/HDC 命令及 iOS 驱动诊断。实体设备验证需在 Windows/iPhone/Android/HarmonyOS 环境进行。项目仅用于开发与测试。
+
