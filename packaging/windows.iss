@@ -1,14 +1,14 @@
 #ifndef AppVersion
-  #define AppVersion "0.1.0-beta.1"
+  #define AppVersion "0.1.0"
 #endif
 
 [Setup]
 AppId={{6E9EE0AA-C970-47CD-9E16-D4CBA61F3144}
-AppName=WinLS Beta
+AppName=WinLS
 AppVersion={#AppVersion}
 AppPublisher=WinLS
 DefaultDirName={localappdata}\Programs\WinLS
-DefaultGroupName=WinLS Beta
+DefaultGroupName=WinLS
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
@@ -27,11 +27,12 @@ Type: files; Name: "{app}\_internal\icudt78.dll"
 Source: "..\dist\WindowsLocationSimulator\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\WinLS Beta"; Filename: "{app}\WindowsLocationSimulator.exe"
-Name: "{autodesktop}\WinLS Beta"; Filename: "{app}\WindowsLocationSimulator.exe"; Tasks: desktopicon
+Name: "{group}\WinLS"; Filename: "{app}\WindowsLocationSimulator.exe"
+Name: "{autodesktop}\WinLS"; Filename: "{app}\WindowsLocationSimulator.exe"; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"
 
 [Run]
-Filename: "{app}\WindowsLocationSimulator.exe"; Description: "Launch WinLS Beta"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\WindowsLocationSimulator.exe"; Description: "Launch WinLS"; Flags: nowait postinstall skipifsilent
+
