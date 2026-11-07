@@ -30,9 +30,11 @@ class CoreTests(unittest.TestCase):
         a, b = Coordinate(39.9, 116.4), Coordinate(39.9, 116.401)
         track = generate_track(a, b, "right")
         self.assertEqual(track[0], track[-1])
-        self.assertAlmostEqual(route_length(track), 1000, delta=1)
+        self.assertAlmostEqual(route_length(track), 400, delta=1)
         with self.assertRaises(ValueError):
             generate_track(a, a, "right")
+        with self.assertRaises(ValueError):
+            generate_track(a, Coordinate(39.9, 116.403), "right")
 
     def test_pace_dynamic_and_parser(self):
         self.assertAlmostEqual(pace_to_speed(3, 20), 5)
@@ -46,3 +48,4 @@ class CoreTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
