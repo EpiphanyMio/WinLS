@@ -12,7 +12,8 @@ import time
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, QTimer, QUrl, QDesktopServices, Signal, Slot
+from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, QTimer, QUrl, Signal, Slot
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDoubleSpinBox,
     QFileDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget,
     QMainWindow, QMessageBox, QPushButton, QScrollArea, QSpinBox, QSplitter,
@@ -55,10 +56,15 @@ class Task(QRunnable):
 
 class MapBridge(QObject):
     clicked = Signal(float, float)
+    point_moved = Signal(int, float, float)
 
     @Slot(float, float)
     def mapClicked(self, latitude, longitude):
         self.clicked.emit(latitude, longitude)
+
+    @Slot(int, float, float)
+    def pointMoved(self, index, latitude, longitude):
+        self.point_moved.emit(index, latitude, longitude)
 
 
 class RouteSignals(QObject):
@@ -256,6 +262,7 @@ class MainWindow(QMainWindow):
         self.map.page().profile().setHttpUserAgent(USER_AGENT)
         self.bridge = MapBridge()
         self.bridge.clicked.connect(self.map_clicked)
+        self.bridge.point_moved.connect(self.map_point_moved)
         channel = QWebChannel(self.map.page())
         channel.registerObject("bridge", self.bridge)
         self.map.page().setWebChannel(channel)
@@ -317,7 +324,7 @@ class MainWindow(QMainWindow):
         self.name = QLineEdit("我的路线")
         route.addWidget(self.name)
         self.editor_tabs = QTabWidget()
-        self.editor_tabs.addTab(QLabel("在左侧地图单击添加路径点；终点会自动连接起点。"), "地图绘制")
+        self.editor_tabs.addTab(QLabel("在左侧地图单击添加路径点，拖动已有点可调整位置；终点会自动连接起点。"), "地图绘制")
         text_tab = QWidget()
         text_layout = QVBoxLayout(text_tab)
         self.route_text = QTextEdit()
@@ -329,8 +336,8 @@ class MainWindow(QMainWindow):
         self.editor_tabs.addTab(text_tab, "坐标文本")
         route.addWidget(self.editor_tabs)
 
-        track = self._box("1000 米环形跑道", side)
-        track.addWidget(QLabel("先在地图上选择一条长直边的两个端点（20～499 米）。"))
+        track = self._box("400 米环形跑道", side)
+        track.addWidget(QLabel("先在地图上选择一条长直边的两个端点（20～200 米，不含 200 米）。"))
         self.track_side = QComboBox()
         self.track_side.addItem("右侧展开", "right")
         self.track_side.addItem("左侧展开", "left")
@@ -444,7 +451,8 @@ class MainWindow(QMainWindow):
         except ValueError:
             single = None
         self._js("draw", [asdict(p) for p in self.points], [asdict(p) for p in preview],
-                 asdict(single) if single else None, asdict(selected) if selected else None, fit)
+                 asdict(single) if single else None, asdict(selected) if selected else None,
+                 fit, not self.runner and not self.text_pending)
 
     def _single_coordinate(self):
         return Coordinate(float(self.latitude.text()), float(self.longitude.text()))
@@ -465,6 +473,20 @@ class MainWindow(QMainWindow):
             self._sync_text()
             self.status.setText(f"已添加第 {len(self.points)} 个路径点。")
         self.draw_map(False)
+
+    def map_point_moved(self, index, latitude, longitude):
+        if self.runner or self.text_pending or not 0 <= index < len(self.points):
+            self.draw_map(False)
+            return
+        try:
+            self.points[index] = Coordinate(latitude, longitude)
+        except ValueError as exc:
+            self.status.setText(str(exc))
+            self.draw_map(False)
+            return
+        self._sync_text()
+        self.draw_map(False)
+        self.status.setText(f"已移动第 {index + 1} 个路径点。")
 
     def _text_changed(self):
         self.text_pending = True
@@ -504,7 +526,7 @@ class MainWindow(QMainWindow):
             self.points = generate_track(points[0], points[1], self.track_side.currentData())
             self._sync_text()
             self.draw_map(True)
-            self.status.setText("已生成约 1000 米环形跑道。")
+            self.status.setText("已生成约 400 米环形跑道。")
         except ValueError as exc:
             self.status.setText(str(exc))
 
@@ -700,6 +722,7 @@ class MainWindow(QMainWindow):
                        self.clear_button, self.apply_button, self.track_button):
             button.setEnabled(not running)
         self.stop_button.setEnabled(running)
+        self.draw_map(False)
 
     def stop_route(self):
         if self.runner:
@@ -863,3 +886,4 @@ def main():
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
