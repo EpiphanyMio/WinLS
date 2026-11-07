@@ -1,6 +1,6 @@
 # 定位模拟器 · Windows
 
-这是独立的 Windows 桌面项目。功能以 Mac 版 `LocationSimulator` 1.1.0 为参考：iPhone、Android 和 HarmonyOS 7+ 实体设备的单点定位、路径循环模拟、地图选点和搜索、学校附近运动场地、1000 米跑道模板、配速与动态速度、平滑路线偏移、JSON 配置导入导出、搜索历史和路线草稿记忆。配置 JSON 与 Mac 版 `schemaVersion: 1` 兼容。地图界面所需的 Leaflet 和 WebChannel 脚本随程序提供；底图瓦片仍需连接 OpenStreetMap，搜索使用 Nominatim，选中学校后使用 Overpass 查找运动场地，结果覆盖范围可能与 Apple 地图不同。
+这是独立的 Windows 桌面项目。功能以 Mac 版 `LocationSimulator` 1.1.0 为参考：iPhone、Android 和 HarmonyOS 7+ 实体设备的单点定位、路径循环模拟、地图选点和搜索、学校附近运动场地、400 米跑道模板、配速与动态速度、平滑路线偏移、JSON 配置导入导出、搜索历史和路线草稿记忆。配置 JSON 与 Mac 版 `schemaVersion: 1` 兼容。地图界面所需的 Leaflet 和 WebChannel 脚本随程序提供；底图瓦片仍需连接 OpenStreetMap，搜索使用 Nominatim，选中学校后使用 Overpass 查找运动场地，结果覆盖范围可能与 Apple 地图不同。
 
 ## Windows 上运行
 
@@ -28,6 +28,9 @@ Windows 无法运行 Apple 的 Xcode iOS Simulator，因此 Mac 版的 iOS 模�
 ## 打包
 
 在 Windows PowerShell 执行 `powershell -ExecutionPolicy Bypass -File scripts\build.ps1`。输出目录为 `dist\WindowsLocationSimulator`；这是目录式程序，需连同目录中的依赖一起分发。当前构建会附带控制台窗口，以便设备桥接进程通过标准输入输出通信并显示诊断信息。Android 功能还需要单独安装 ADB Platform-Tools 和下述手机配套 App。尚未在真实 Windows 主机和实体手机上完成端到端测试，分发前应在目标系统验证安装、发现设备、设置和清除定位、路线运行。程序未签名。
+
+## iOS 实体设备
+本产品对iOS设备完美适配，利用iOS的开发者套件，可以实现更底层的定位修改。实测小程序校园跑可完美兼容。
 
 ## Android 实体设备
 
