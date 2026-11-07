@@ -158,8 +158,8 @@ def generate_track(start: Coordinate, end: Coordinate, side: str) -> list[Coordi
     dlon = (end.longitude - start.longitude + 180) % 360 - 180
     east, north = dlon * lon_scale, (end.latitude - start.latitude) * lat_scale
     straight = math.hypot(east, north)
-    if not 20 <= straight < 499 or start.distance(end) >= 499:
-        raise ValueError("两个端点应标出同一条长直边，相距 20～499 米。")
+    if not 20 <= straight < 200 or start.distance(end) >= 200:
+        raise ValueError("两个端点应标出同一条长直边，相距 20～200 米（不含 200 米）。")
     ae, an = east / straight, north / straight
     ce, cn = (-an, ae) if side == "left" else (an, -ae)
 
@@ -180,10 +180,10 @@ def generate_track(start: Coordinate, end: Coordinate, side: str) -> list[Coordi
         points.append(start)
         return points
 
-    low, high = 0.0, 500.0
+    low, high = 0.0, 200.0
     for _ in range(30):
         radius = (low + high) / 2
-        if route_length(path(radius)) < 1000:
+        if route_length(path(radius)) < 400:
             low = radius
         else:
             high = radius
@@ -289,3 +289,4 @@ class MotionProfile:
                         self.recovery_left = self.rng.uniform(*duration_range)
                         self.recovery_speed = max(.25, min(self.speed * .55, self.rng.uniform(*speed_range)))
         return distance
+
