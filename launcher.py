@@ -11,7 +11,7 @@ if __name__ == "__main__":
         import winloc.harmony
         import winloc.ios
         import winloc.iphone_bridge
-        print("WinLS beta imports OK")
+        print("WinLS imports OK")
     elif len(sys.argv) > 1 and sys.argv[1] == "--list-devices":
         from pymobiledevice3.usbmux import list_devices
         print(json.dumps([device.serial for device in asyncio.run(list_devices()) if device.is_usb]), flush=True)
@@ -25,3 +25,4 @@ if __name__ == "__main__":
     else:
         from winloc.app import main
         raise SystemExit(main())
+
