@@ -1,4 +1,4 @@
-name: Build beta release
+name: Build WinLS 0.1.0 release
 
 on:
   push:
@@ -51,15 +51,15 @@ jobs:
             choco install innosetup --no-progress -y
           }
           if (-not (Test-Path $compiler)) { throw "Inno Setup compiler not found" }
-          & $compiler "/DAppVersion=0.1.0-beta.1" packaging/windows.iss
+          & $compiler "/DAppVersion=0.1.0" packaging/windows.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          if (-not (Test-Path dist/release/WinLS-0.1.0-beta.1-Windows-Setup.exe)) {
+          if (-not (Test-Path dist/release/WinLS-0.1.0-Windows-Setup.exe)) {
             throw "Windows installer not generated"
           }
       - uses: actions/upload-artifact@v4
         with:
-          name: winls-windows-beta
-          path: dist/release/WinLS-0.1.0-beta.1-Windows-Setup.exe
+          name: winls-windows-0.1.0
+          path: dist/release/WinLS-0.1.0-Windows-Setup.exe
           if-no-files-found: error
 
   android:
@@ -80,33 +80,36 @@ jobs:
       - name: Verify and name APK
         run: |
           mkdir -p dist/release
-          cp android-companion/app/build/outputs/apk/debug/app-debug.apk dist/release/WinLS-0.1.0-beta.1-Android.apk
-          test -s dist/release/WinLS-0.1.0-beta.1-Android.apk
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging dist/release/WinLS-0.1.0-beta.1-Android.apk | grep "versionName='0.1.0-beta.1'"
+          cp android-companion/app/build/outputs/apk/debug/app-debug.apk dist/release/WinLS-0.1.0-Android.apk
+          test -s dist/release/WinLS-0.1.0-Android.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging dist/release/WinLS-0.1.0-Android.apk | grep "versionName='0.1.0'"
       - uses: actions/upload-artifact@v4
         with:
-          name: winls-android-beta
-          path: dist/release/WinLS-0.1.0-beta.1-Android.apk
+          name: winls-android-0.1.0
+          path: dist/release/WinLS-0.1.0-Android.apk
           if-no-files-found: error
 
   release:
-    needs: windows
+    needs: [windows, android]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: winls-windows-beta
+          pattern: winls-*-0.1.0
           path: release-assets
-      - name: Publish beta prerelease
+          merge-multiple: true
+      - name: Publish formal release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          test -s release-assets/WinLS-0.1.0-beta.1-Windows-Setup.exe
-          if gh release view v0.1.0-beta.1 >/dev/null 2>&1; then
-            echo "Beta release already exists; leaving it unchanged."
+          test -s release-assets/WinLS-0.1.0-Windows-Setup.exe
+          test -s release-assets/WinLS-0.1.0-Android.apk
+          if gh release view v0.1.0 >/dev/null 2>&1; then
+            echo "Release already exists; leaving it unchanged."
             exit 0
           fi
-          gh release create v0.1.0-beta.1 release-assets/* \
-            --target "$GITHUB_SHA" --title "WinLS 0.1.0 beta.1" \
-            --notes-file RELEASE-NOTES-beta.md --prerelease
+          gh release create v0.1.0 release-assets/* \
+            --target "$GITHUB_SHA" --title "WinLS 0.1.0" \
+            --notes-file RELEASE-NOTES.md
+
